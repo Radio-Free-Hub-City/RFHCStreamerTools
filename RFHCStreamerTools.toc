@@ -1,0 +1,9 @@
+## Interface: 120100
+## Title: RFHC Streamer Tools
+## Notes: Tools for managing streamer overlay features in-game
+## Author: Ken Buckler - Radio Free Hub City
+## Version: 1.0.0
+## SavedVariables: RFHCStreamerToolsDB
+## SavedVariablesPerCharacter:
+
+RFHCStreamerTools.lua
