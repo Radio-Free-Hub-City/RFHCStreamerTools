@@ -17,7 +17,6 @@ local defaultDB = {
 local sessionDeaths = 0
 local sessionStartGold = 0
 local sessionInstances = 0
-local sessionHonor = 0
 local sessionHKs = 0
 local sessionStartTime = GetTime()
 local currentTrackIndex = nil
@@ -338,17 +337,16 @@ local soundList = {
     { name = "Leeroy", key = "leeroy", soundID = 43253, popupText = "LEEROY JENKINS!", popupIcon = "Interface\\Icons\\Achievement_GuildPerk_WorkingOvertime" },
     { name = "Millhouse Mana", key = "mana", soundID = 11175, popupText = "Wait till I get some mana!", popupIcon = "Interface\\Icons\\Spell_Frost_ManaRecharge" },
     { name = "Millhouse Sweetcheeks", key = "sweetcheeks", soundID = 11179, popupText = "I'm gonna light you up sweetcheeks!", popupIcon = "Interface\\Icons\\Spell_Frost_ManaRecharge" },
-    { name = "Kael'thas Strength", key = "strength", soundID = 12419, popupText = "Grant me strength!", popupIcon = "Interface\\Icons\\Spell_Fire_SoulBurn" },
-    { name = "XT-002 New Toys", key = "newtoys", soundID = 15724, popupText = "New Toys!", popupIcon = "Interface\\Icons\\INV_Gizmo_02" },
-    { name = "XT-002 Ready", key = "ready2play", soundID = 15726, popupText = "Ready to Play!", popupIcon = "Interface\\Icons\\INV_Gizmo_02" },
+    { name = "Kael'thas Setback", key = "setback", soundID = 12419, popupText = "Merely a setback!", popupIcon = "Interface\\Icons\\Spell_Fire_SoulBurn" },
+    { name = "XT-002 Bad Toys", key = "badtoys", soundID = 15726, popupText = "You are bad toys! VERY BAD!", popupIcon = "Interface\\Icons\\INV_Gizmo_02" },
+    { name = "Lich King", key = "lichking", soundID = 17397, popupText = "Frostmourne Hungers...", popupIcon = "Interface\\Icons\\Spell_Frost_ChillingArmor" },
     { name = "Illidan Prepared", key = "illidan", soundID = 11466, popupText = "YOU ARE NOT PREPARED!", popupIcon = "Interface\\Icons\\Ability_Warrior_InnerRage" },
-    { name = "Putricide Good", key = "goodnews", soundID = 17142, popupText = "Good news, everyone!", popupIcon = "Interface\\Icons\\INV_Alchemy_Potion_01" },
-    { name = "Putricide Bad", key = "badnews", soundID = 17117, popupText = "Bad news, everyone!", popupIcon = "Interface\\Icons\\INV_Alchemy_Potion_01" },
+    { name = "Putricide News", key = "putricide", soundID = 17142, popupText = "Good news, everyone!", popupIcon = "Interface\\Icons\\INV_Alchemy_Potion_01" },
     { name = "Peon Work", key = "peon", soundID = 7194, popupText = "Work, work!", popupIcon = "Interface\\Icons\\INV_Pick_02" },
-    { name = "Cup Runneth Over", key = "cup", soundID = 16686, popupText = "My cup runneth over!", popupIcon = "Interface\\Icons\\Ability_Warrior_InnerRage" },
+    { name = "Wilhelm Scream", key = "wilhelm", soundID = 21978 },
     { name = "Achievement", key = "achievement", soundID = 12891, popupText = "Achievement Unlocked!", popupIcon = "Interface\\Icons\\ACHIEVEMENT_GUILDPERK_HEROICPRESENCE_RANK2" },
-    { name = "Failure Leeroy", key = "leeroyfail", soundID = 43252, popupText = "FAIL! At least I have chicken?", popupIcon = "Interface\\Icons\\Spell_Shadow_DeathScream" },
-    { name = "Failure Horn", key = "wipe", soundID = 8456, popupText = "FAIL!", popupIcon = "Interface\\Icons\\Spell_Shadow_DeathScream" },
+    { name = "Bounty / Quest", key = "quest", soundID = 618 },
+    { name = "Failure Horn", key = "wipe", soundID = 8456, popupText = "Wipe!", popupIcon = "Interface\\Icons\\Spell_Shadow_DeathScream" },
     { name = "Loot Coins", key = "coins", soundID = 120, popupText = "Cha-ching!", popupIcon = "Interface\\Icons\\INV_Misc_Coin_01" }
 }
 
@@ -394,7 +392,9 @@ local musicPlaylist = {
     { title = "Sholazar Basin", fdid = 237277 },
     { title = "Eversong Woods", fdid = 53186 },
     { title = "Black Temple", fdid = 53180 },
-    { title = "Boralus Harbor", fdid = 2024286 }
+    { title = "Boralus Harbor", fdid = 2024286 },
+    { title = "Gunships", fdid = 350058 },
+    { title = "Level70ETC", fdid = 877254 }
 }
 
 local function UpdateJukeboxDisplay()
@@ -587,7 +587,7 @@ counterFrame.pvpLabel = counterFrame:CreateFontString(nil, "OVERLAY", "GameFontN
 counterFrame.pvpLabel:SetPoint("TOPLEFT", counterFrame.instanceLabel, "BOTTOMLEFT", 0, -12)
 counterFrame.pvpLabel:SetFont("Fonts\\FRIZQT__.TTF", 24, "OUTLINE")
 counterFrame.pvpLabel:SetTextColor(1, 0.3, 0.3)
-counterFrame.pvpLabel:SetText("Honor: +0 (0 HKs)")
+counterFrame.pvpLabel:SetText("HKs: 0")
 
 C_Timer.NewTicker(1, function()
     if counterFrame:IsShown() then
@@ -731,7 +731,6 @@ eventFrame:RegisterEvent("PLAYER_LEVEL_UP")
 eventFrame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 eventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 eventFrame:RegisterEvent("ZONE_CHANGED")
-eventFrame:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
 eventFrame:RegisterEvent("PLAYER_PVP_KILLS_CHANGED")
 eventFrame:RegisterEvent("TRADE_REQUEST")
 eventFrame:RegisterEvent("DUEL_REQUESTED")
@@ -800,7 +799,18 @@ eventFrame:SetScript("OnEvent", function(self, event, unit, ...)
         end
 
     elseif event == "PLAYER_FLAGS_CHANGED" and unit == "player" then
-        if RFHCStreamerToolsDB and RFHCStreamerToolsDB.enableBRB and UnitIsAFK("player") then
+        local isAFK = false
+        
+        -- Safely query UnitIsAFK without invoking non-existent security API calls
+        local inInstance, instanceType = IsInInstance()
+        if not (inInstance and (instanceType == "pvp" or instanceType == "arena")) then
+            local success, result = pcall(UnitIsAFK, "player")
+            if success and result == true then
+                isAFK = true
+            end
+        end
+
+        if RFHCStreamerToolsDB and RFHCStreamerToolsDB.enableBRB and isAFK then
             UpdateBRBText()
             brbFrame:Show()
         else
@@ -829,15 +839,9 @@ eventFrame:SetScript("OnEvent", function(self, event, unit, ...)
         PlaySound(888, "Master")
         TriggerPopup("LEVEL UP!", "Interface\\Icons\\Spell_Holy_DivineIllumination")
 
-    elseif event == "CHAT_MSG_COMBAT_HONOR_GAIN" then
-        local msg = ...
-        local honorGained = tonumber(msg:match("%d+")) or 0
-        sessionHonor = sessionHonor + honorGained
-        counterFrame.pvpLabel:SetText("Honor: +" .. sessionHonor .. " (" .. sessionHKs .. " HKs)")
-
     elseif event == "PLAYER_PVP_KILLS_CHANGED" then
         sessionHKs = sessionHKs + 1
-        counterFrame.pvpLabel:SetText("Honor: +" .. sessionHonor .. " (" .. sessionHKs .. " HKs)")
+        counterFrame.pvpLabel:SetText("HKs: " .. sessionHKs)
     end
 
     if RFHCStreamerToolsDB and RFHCStreamerToolsDB.streamerMode then
