@@ -382,18 +382,23 @@ end
 local musicPlaylist = {
     { title = "Horde Tavern", fdid = 53221 },
     { title = "Lover's Tavern", fdid = 53206 },
+    { title = "Goblin Tavern", fdid = 441618 },
     { title = "Stormwind Theme", fdid = 53216 },
     { title = "Orgrimmar Theme", fdid = 53213 },
     { title = "Invincible (Arthas Theme)", fdid = 306471 },
     { title = "Grizzly Hills", fdid = 237078 },
     { title = "Naxxramas Raid", fdid = 53472 },
     { title = "Karazhan Opera", fdid = 53198 },
-    { title = "Ironforge Theme", fdid = 53203 },
+    { title = "Dark Ironforge", fdid = 441565 },
     { title = "Sholazar Basin", fdid = 237277 },
     { title = "Eversong Woods", fdid = 53186 },
     { title = "Black Temple", fdid = 53180 },
     { title = "Boralus Harbor", fdid = 2024286 },
+    { title = "Nazmir Swamp", fdid = 2143527 },
+    { title = "Midnight Battle", fdid = 7690555 },
     { title = "Gunships", fdid = 350058 },
+    { title = "Razor Hill Battle", fdid = 441786 },
+    { title = "Brewfest Goblins", fdid = 228576 },
     { title = "Level70ETC", fdid = 877254 }
 }
 
